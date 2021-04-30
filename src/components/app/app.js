@@ -6,10 +6,24 @@ export default class App extends Component {
   RazbiratorService = new RazbiratorService();
   state = {
     questions: null,
+    questionId: null,
+    currentQuestion: null
   }
 
   componentDidMount() {
     this.updateQuestions();
+  }
+
+  getFormData = (e) => {
+    const form = e.target;
+    const object = {};
+    const formData = new FormData(form);
+
+    for (var pair of formData.entries()) {
+      object[pair[0]] = pair[1];
+    }
+
+    return object;
   }
 
   // удаление вопроса
@@ -24,26 +38,20 @@ export default class App extends Component {
       }
     });
   };
-  
+
   onRemoveBtnClick = (id) => {
     this.RazbiratorService
-    .deleteQuestion(id)
-    .then((id) => {
-      this.deleteQuestion(id);
-    });
+      .deleteQuestion(id)
+      .then((id) => {
+        this.deleteQuestion(id);
+      });
   };
 
   // добавление вопроса
   onSubmit = (e) => {
     e.preventDefault();
 
-    const form = e.target;
-    const questionObj = {};
-    const formData = new FormData(form);
-
-    for (var pair of formData.entries()) {
-      questionObj[pair[0]] = pair[1];
-    }
+    const questionObj = this.getFormData(e);
 
     this.RazbiratorService
       .addQuestions(questionObj)
@@ -57,6 +65,47 @@ export default class App extends Component {
           return {
             questions: newArr
           };
+        });
+      });
+  }
+
+  // редактирование вопроса
+  onEditBtnClick = (id) => {
+    const questions = this.state.questions;
+    const idx = questions.findIndex((el) => el.id === id);
+    const item = questions[idx];
+
+    this.setState({
+      questionId: id,
+      currentQuestion: item
+    });
+  }
+
+  onEditSubmit = (e) => {
+    e.preventDefault();
+    const questionObj = this.getFormData(e);
+    questionObj.id = this.state.questionId;
+
+    this.RazbiratorService
+      .editQuestion(questionObj)
+      .then((question) => {
+        const id = question.id;
+
+        this.setState(({ questions }) => {
+          const idx = questions.findIndex((el) => el.id === id);
+          const oldItem = questions[idx];
+          const newItem = {...oldItem, question: question.question, answer: question.answer, comment: question.comment};
+
+          const newArray = [
+            ...questions.slice(0, idx),
+            newItem,
+            ...questions.slice(idx + 1)];
+
+          return {
+            questions: newArray,
+            questionId: null,
+            currentQuestion: null
+          }
         });
       });
   }
@@ -85,7 +134,8 @@ export default class App extends Component {
             <div className="questions__header">Комментарий:</div>
             <span>{question.comment}</span>
             <div className="questions__btn-col">
-              <button onClick={() => {this.onRemoveBtnClick(question.id)}} className="questions__btn" type="button">Delete</button>
+              <button onClick={() => { this.onRemoveBtnClick(question.id) }} className="questions__btn" type="button">Delete</button>
+              <button onClick={() => { this.onEditBtnClick(question.id) }} className="questions__btn" type="button">Edit</button>
             </div>
           </article>
         </li>
@@ -93,8 +143,21 @@ export default class App extends Component {
     });
   }
 
+  renderEditForm = () => {
+    const { currentQuestion } = this.state;
+    return (
+      <form className="form" onSubmit={this.onEditSubmit}>
+        <h4>Редактирование вопроса</h4>
+        <input className="field" name="question" type="text" placeholder="Вопрос" required defaultValue={currentQuestion.question}/>
+        <input className="field" name="answer" type="text" placeholder="Ответ" required defaultValue={currentQuestion.answer} />
+        <textarea className="field field--textarea" name="comment" placeholder="Комментарий" defaultValue={currentQuestion.comment}></textarea>
+        <button type="submit">Редактировать</button>
+      </form>
+    )
+  };
+
   render() {
-    const { questions } = this.state;
+    const { questions, questionId } = this.state;
 
     if (!questions) {
       return (
@@ -103,6 +166,10 @@ export default class App extends Component {
     }
 
     const items = this.renderQuestions(questions);
+    let editForm = null;
+    if (questionId) {
+      editForm = this.renderEditForm();
+    }
 
     return (
       <div className="container">
@@ -111,6 +178,7 @@ export default class App extends Component {
             {items}
           </ul>
         </section>
+        {editForm}
         <form className="form" onSubmit={this.onSubmit}>
           <h4>Добавление вопроса</h4>
           <input className="field" name="question" type="text" placeholder="Вопрос" required />

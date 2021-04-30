@@ -41,10 +41,25 @@ export default class RazbiratorService {
     const res = await fetch(`${this._apiBase}delete-question.php`, {
       method: 'POST',
       header: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': 'http://localhost:3000/'
       },
       body: JSON.stringify({
         questionId
+      })
+    });
+
+    return await res.json();
+  }
+
+  async editQuestion(question) {
+    const res = await fetch(`${this._apiBase}edit-question.php`, {
+      method: 'POST',
+      header: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        question
       })
     });
 
